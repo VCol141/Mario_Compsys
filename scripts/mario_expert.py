@@ -113,19 +113,6 @@ class MarioController(MarioEnvironment):
         for _ in range(5):
             self.pyboy.tick()
 
-class MarioBrain:
-    def __init__(self, results_path: str, headless=False):
-        self.results_path = results_path
-
-        self.environment = MarioController(headless=headless)
-
-
-class MarioPos:
-    def __init__(self, results_path: str, headless=False):
-        self.results_path = results_path
-
-        self.environment = MarioController(headless=headless)
-
 
 class MarioExpert:
     """
