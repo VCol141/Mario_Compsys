@@ -337,23 +337,21 @@ class Enviroment:
             current_block = self.game_area()[check_y][check_x]
 
             if current_block == 0:
-                
+
                 mock_game_area()[check_y][check_x] = 99
 
             elif current_block == 14 or current_block == 10:
-                # check_y += (-1) if block_y < self.mario_y else (1)
-                check_x += (-2) if go_left == True else (2)
-                if self.game_area()[check_y - 1][check_x] != 0:
-                    check_y -= 1
-                else:
-                    check_y += 1
-                break
+                if self.game_area()[check_y - 1][check_x] == 0:
+                    check_x
+                
             
 
-            if go_left:
+            if go_left and (block_y != self.mario_y):
                 check_x -= 1
-            else:
+            elif (block_y != self.mario_y):
                 check_x += 1
+            elif (self.mario_y > block_y):
+
 
 
 class MarioExpert:
