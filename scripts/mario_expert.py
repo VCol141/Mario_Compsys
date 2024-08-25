@@ -98,11 +98,14 @@ class MarioController(MarioEnvironment):
 
         # Simply toggles the buttons being on or off for a duration of act_freq
 
-        if delay < 5:
+        if delay < 5 and delay > 0:
             delay = 5
         
         for action in actions:
             self.pyboy.send_input(action)
+
+        if (delay == 0):
+            return
         
         for _ in range(delay):
             self.pyboy.tick()
@@ -112,20 +115,6 @@ class MarioController(MarioEnvironment):
 
         for _ in range(5):
             self.pyboy.tick()
-
-
-class Goomba:
-    def __init__(self, enviroment, positons):
-        self.controller = enviroment
-        self.game_area = enviroment.game_area()
-        self.positions = positons
-
-
-class Mario:
-    def __init__(self, enviroment):
-        self.controller = enviroment
-        self.game_area = enviroment.game_area()
-
 
 class Actions:
     def __init__(self, enviroment, positions):
@@ -144,7 +133,27 @@ class Actions:
         elif is_tunnel:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], tunnel_delay)
         else:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5) 
+            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0) 
+    
+
+    def kill_goomb(self):
+
+        # Get the positions of mario and any goomba
+        [mario_x, mario_y] = self.positions.find_mario()
+        goombas = self.positions.find_goomb()
+
+        # Return false if no goomba
+        if self.positions.goomba_coming() is False:
+            return False
+        
+        # If there are goomba get the x and y position of the first goomba
+        [goomb_y, goomb_x] = np.array(goombas[0])
+
+        if abs(mario_x - goomb_x) < 2:
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 7])
+            return True
+        elif abs(mario_y - goomb_y) < 2:
+            return True
     
 
     def go_to_block(self):
@@ -286,7 +295,14 @@ class Enviroment:
 
         mock_game_area = self.game_area()
 
+        if np.array(self.find_goomb()).size <= 1:
+            return is_goomba
+
         while check_x < 20 and is_goomba == False:
+
+            if check_y >= 16:
+                return False
+            
             current_block = self.game_area()[check_y][check_x]
 
             if current_block == 0:
@@ -301,9 +317,6 @@ class Enviroment:
                 break
             
             check_x += 1
-
-        print("\n")
-        print(mock_game_area)
         
         return is_goomba
     
@@ -351,7 +364,7 @@ class Enviroment:
             elif (block_y != self.mario_y):
                 check_x += 1
             elif (self.mario_y > block_y):
-
+                print("none")
 
 
 class MarioExpert:
@@ -372,7 +385,7 @@ class MarioExpert:
 
         self.environment = MarioController(headless=headless)
         self.where = Enviroment(enviroment=self.environment)
-        self.Goomba = Goomba(enviroment=self.environment, positons=self.where)
+        self.Goomba = Goomba(enviroment=self.environment, positons=self.environment)
         self.actions = Actions(enviroment=self.environment, positions=self.where)
 
         self.video = None
@@ -395,6 +408,10 @@ class MarioExpert:
 
         output_action = ([0], 0)
 
+        goomb = self.where.find_goomb()
+
+        print(goomb)
+
         return output_action
 
 
@@ -405,26 +422,12 @@ class MarioExpert:
         This is just a very basic example
         """
 
-        [action, delay] = self.choose_action()
-
         self.environment.pyboy.tick()
         self.where.find_mario()
 
-
-
-        is_goomba = self.where.goomba_coming()
-        # if is_goomba:
-        #     print("goomba ahead")
-
-        # if is_goomba:
-        #     return
-        #     # print("NONE")
-        # elif (np.array(self.where.find_special_blocks()).size > 1) and (self.where.find_wall()[0] == False) and (self.where.find_tunnel()[0] == False) :
-        #     self.actions.go_to_block()
-        #     # print("BLOCK")
-        # else:
-        #     self.actions.move_normally()
-        #     # print("FORWARD")
+        if self.actions.kill_goomb() == False:
+            self.actions.move_normally()
+        
 
 
 
