@@ -277,7 +277,7 @@ class Enviroment:
 
         mock_game_area = self.game_area()
 
-        if np.array(self.find_bad_guy(15)).size <= 1:
+        if np.array(self.find_bad_guy(id)).size <= 1:
             return is_bad
 
         while check_x < 20:
@@ -373,14 +373,14 @@ class Actions:
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
     
 
-    def kill_goomb(self):
+    def kill_bad_guy(self, id):
 
         # Get the positions of mario and any goomba
         [mario_x, mario_y] = self.positions.find_mario()
-        goombas = self.positions.find_bad_guy(15)
+        goombas = self.positions.find_bad_guy(id)
 
         # Return false if no goomba
-        if self.positions.bad_guy_coming(15) is False:
+        if self.positions.bad_guy_coming(id) is False:
             return False
         
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
@@ -485,7 +485,13 @@ class MarioExpert:
         self.environment.pyboy.tick()
         self.where.find_mario()
 
-        kg = self.actions.kill_goomb()
+        kg = self.actions.kill_bad_guy(15)
+
+        if kg is False:
+            kg = self.actions.kill_bad_guy(16)
+
+        if kg is False:
+            kg = self.actions.kill_bad_guy(18)
 
         if kg is False:
             self.actions.move_normally()
