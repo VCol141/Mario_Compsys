@@ -207,8 +207,6 @@ class Enviroment:
 
         initial_sweep = np.array(np.where(self.game_area()[range(14,16),:] == 0))
 
-        # print(self.game_area()[range(8, 16), :])
-
         if initial_sweep.size <= 1:
             return(False, 0)
         
@@ -270,7 +268,9 @@ class Enviroment:
         return self.goomba_pos
     
 
-    def in_view(self, id):
+    def Bad_Guys_Ahead(self, id):
+
+        list_of_non_obstacles = [id, 0, 1]
         
         check_y = round(self.mario_y + 0.5)
         check_x = round(self.mario_x)
@@ -295,14 +295,14 @@ class Enviroment:
                 mock_game_area[check_y][check_x] = 76
                 break
             
-            if (self.game_area()[check_y + 1][check_x] == 0 or self.game_area()[check_y + 1][check_x] == 1 or self.game_area()[check_y + 1][check_x] == id) and gone_up is False:
+            if (self.game_area()[check_y + 1][check_x] in list_of_non_obstacles) and gone_up is False:
                 check_y += 1
                 gone_down = True
-            elif (self.game_area()[check_y - 1][check_x + 1] == 0 or self.game_area()[check_y - 1][check_x + 1] == 1 or self.game_area()[check_y - 1][check_x + 1] == id) and (self.game_area()[check_y][check_x + 1] == 0 or self.game_area()[check_y][check_x + 1] == 1 or  self.game_area()[check_y][check_x + 1] == id):
+            elif (self.game_area()[check_y - 1][check_x + 1]  in list_of_non_obstacles) and (self.game_area()[check_y][check_x + 1]  in list_of_non_obstacles):
                 check_x += 1
             elif (self.game_area()[check_y][check_x + 1] == 0 or self.game_area()[check_y][check_x + 1] == 1 or  self.game_area()[check_y][check_x + 1] == id) and (1 == 0):
                 check_x += 1
-            elif (self.game_area()[check_y - 1][check_x] == 0 or self.game_area()[check_y - 1][check_x] == 1 or  self.game_area()[check_y - 1][check_x] == id) and gone_down is False:
+            elif (self.game_area()[check_y - 1][check_x]  in list_of_non_obstacles) and gone_down is False:
                 check_y -= 1
                 gone_up = True
 
@@ -395,11 +395,9 @@ class Actions:
         #     return False
 
         # Return false if no goomba
-        if self.positions.in_view(id) is False:
-            print("Returning False")
+        if self.positions.Bad_Guys_Ahead(id) is False:
             return False
         
-        print("Releasing Button")
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
         
         # If there are goomba get the x and y position of the first goomba
@@ -415,8 +413,6 @@ class Actions:
     
 
     def go_to_block(self):
-
-        # print(self.game_area())
     
         if np.array(self.positions.find_special_blocks()).size <= 1:
             return
@@ -483,8 +479,6 @@ class MarioExpert:
 
         # if self.environment.game_area().size not 320:
         #     return
-
-        print(self.environment.game_area().size)
 
         kg = self.actions.kill_bad_guy(15)
         if kg is False: kg = self.actions.kill_bad_guy(16)
