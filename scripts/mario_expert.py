@@ -142,12 +142,6 @@ class Enviroment:
             self.mario_y = (np.max(mario_y) + np.min(mario_y)) / 2
         
         return self.mario_x, self.mario_y
-    
-    def find_turtle(self):
-        [turtle_x, turtle_y] = np.where(self.game_area() == 1)
-
-        if turtle_x.size > 0 and turtle_y.size > 0:
-            return [(np.max(turtle_x) + np.min(turtle_x)) / 2, (np.max(turtle_y) + np.min(turtle_y)) / 2]
 
     
 
@@ -276,37 +270,36 @@ class Enviroment:
         return self.goomba_pos
     
 
-    def goomba_coming(self):
-        is_goomba = False
+    def bad_guy_coming(self, id):
+        is_bad = False
         check_y = round(self.mario_y + 0.5)
         check_x = round(self.mario_x + 1)
 
         mock_game_area = self.game_area()
 
         if np.array(self.find_bad_guy(15)).size <= 1:
-            return is_goomba
+            return is_bad
 
-        while check_x < 20 and is_goomba == False:
+        while check_x < 20:
 
             if check_y >= 16:
-                return False
+                return is_bad
             
             current_block = self.game_area()[check_y][check_x]
 
             if current_block == 0:
-                is_goomba = False
                 mock_game_area[check_y][check_x] = 99
             elif current_block == 14 or current_block == 10:
                 check_y -= 1
                 check_x -= 2
-            elif current_block == 15:
-                is_goomba = True
+            elif current_block == id:
+                is_bad = True
                 mock_game_area[check_y][check_x] = 999
                 break
             
             check_x += 1
         
-        return is_goomba
+        return is_bad
     
 
     def path_to_special(self):
@@ -387,7 +380,7 @@ class Actions:
         goombas = self.positions.find_bad_guy(15)
 
         # Return false if no goomba
-        if self.positions.goomba_coming() is False:
+        if self.positions.bad_guy_coming(15) is False:
             return False
         
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
