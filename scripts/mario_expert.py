@@ -22,10 +22,6 @@ import math as mt
 
 from scipy.signal import correlate2d
 
-mario_x_global = 0
-mario_y_global = 0
-goomba_in_scene = 0
-
 class MarioController(MarioEnvironment):
     """
     The MarioController class represents a controller for the Mario game environment.
@@ -374,9 +370,7 @@ class Actions:
     
 
     def kill_bad_guy(self, id):
-
-        # Get the positions of mario and any goomba
-        [mario_x, mario_y] = self.positions.find_mario()
+        
         goombas = self.positions.find_bad_guy(id)
 
         # Return false if no goomba
@@ -388,18 +382,17 @@ class Actions:
         # If there are goomba get the x and y position of the first goomba
         [goomb_y, goomb_x] = np.array(goombas[0])
 
-        if abs(mario_x - goomb_x) < 2:
+        if abs(self.positions.mario_x - goomb_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 5])
 
             for tick in range(15):
                 self.controller.pyboy.tick()
             return True
-        elif abs(mario_y - goomb_y) < 2:
+        elif abs(self.positions.mario_y - goomb_y) < 2:
             return True
     
 
     def go_to_block(self):
-        [mario_x, mario_y] = self.positions.find_mario()
 
         # print(self.game_area())
     
@@ -409,12 +402,12 @@ class Actions:
         is_smallest = 1000
 
         for blocks in self.positions.find_special_blocks():
-            diffx = mario_x - blocks[1]
-            diffy = mario_y - blocks[0]
+            diffx = self.positions.mario_x - blocks[1]
+            diffy = self.positions.mario_y - blocks[0]
 
             if mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2)) < is_smallest:
-                diff_x = mario_x - blocks[1]
-                diff_y = mario_y - blocks[0]
+                diff_x = self.positions.mario_x - blocks[1]
+                diff_y = self.positions.mario_y - blocks[0]
                 is_smallest = mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2))
 
         if diff_y < 0:
@@ -486,15 +479,9 @@ class MarioExpert:
         self.where.find_mario()
 
         kg = self.actions.kill_bad_guy(15)
-
-        if kg is False:
-            kg = self.actions.kill_bad_guy(16)
-
-        if kg is False:
-            kg = self.actions.kill_bad_guy(18)
-
-        if kg is False:
-            self.actions.move_normally()
+        if kg is False: kg = self.actions.kill_bad_guy(16)
+        if kg is False: kg = self.actions.kill_bad_guy(18)
+        if kg is False: self.actions.move_normally()
 
         print(self.environment.game_area())
             
