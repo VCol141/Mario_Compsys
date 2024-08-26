@@ -160,9 +160,12 @@ class Enviroment:
         delay = 12
         is_wall = False
 
+        if (self.mario_x + 1.5) >= 20:
+            return (is_wall, 0)
+
         initial_sweep = np.array(np.where(self.game_area()[:, int(self.mario_x + 1.5)] == 10))
 
-        if initial_sweep.size == 0 or np.array(np.where(self.game_area()[int(self.mario_y),:] == 10)).size == 0:
+        if initial_sweep.size == 0 or np.array(np.where(self.game_area()[int(self.mario_y + 0.5),:] == 10)).size == 0:
             return (is_wall, 0)
         
         array = np.min(initial_sweep)
@@ -179,6 +182,9 @@ class Enviroment:
     def find_tunnel(self):
         is_tunnel = False
         delay = 12
+
+        if (self.mario_x + 1.5 >= 20):
+            return (is_tunnel, 0)
 
         initial_sweep = np.array(np.where(self.game_area()[:, int(self.mario_x + 1.5)] == 14))
 
@@ -231,7 +237,7 @@ class Enviroment:
 
             if check_y >= 16:
                 move  = 2
-                delay = 12
+                delay = 20
                 break
 
             current_block = self.game_area()[check_y][check_x]
@@ -267,19 +273,15 @@ class Enviroment:
     
 
     def bad_guy_coming(self, id):
-        is_bad = False
         check_y = round(self.mario_y + 0.5)
         check_x = round(self.mario_x + 1)
 
         mock_game_area = self.game_area()
 
         if np.array(self.find_bad_guy(id)).size <= 1:
-            return is_bad
+            return False
 
-        while check_x < 20:
-
-            if check_y >= 16:
-                return is_bad
+        while check_x < 20 and check_y >= 16:
             
             current_block = self.game_area()[check_y][check_x]
 
@@ -289,13 +291,59 @@ class Enviroment:
                 check_y -= 1
                 check_x -= 2
             elif current_block == id:
-                is_bad = True
                 mock_game_area[check_y][check_x] = 999
-                break
+                return True
             
             check_x += 1
         
-        return is_bad
+        return False
+    
+
+    def in_view(self, id):
+        
+        check_y = round(self.mario_y + 0.5)
+        check_x = round(self.mario_x)
+
+        if id == 18 and id in self.game_area():
+            return True
+
+        in_view = False
+
+        gone_up = False
+        gone_down = False
+
+        mock_game_area = self.game_area()
+        
+        i = 0
+
+        while (check_y < 15 and check_y >= 0) and (check_x < 19 and check_x >= 0):
+            mock_game_area[check_y][check_x] = 99
+
+            if self.game_area()[check_y][check_x] == id:
+                in_view = True
+                mock_game_area[check_y][check_x] = 76
+                break
+            
+            if (self.game_area()[check_y + 1][check_x] == 0 or self.game_area()[check_y + 1][check_x] == 1 or self.game_area()[check_y + 1][check_x] == id) and gone_up is False:
+                check_y += 1
+                gone_down = True
+            elif (self.game_area()[check_y - 1][check_x + 1] == 0 or self.game_area()[check_y - 1][check_x + 1] == 1 or self.game_area()[check_y - 1][check_x + 1] == id) and (self.game_area()[check_y][check_x + 1] == 0 or self.game_area()[check_y][check_x + 1] == 1 or  self.game_area()[check_y][check_x + 1] == id):
+                check_x += 1
+            elif (self.game_area()[check_y][check_x + 1] == 0 or self.game_area()[check_y][check_x + 1] == 1 or  self.game_area()[check_y][check_x + 1] == id) and (1 == 0):
+                check_x += 1
+            elif (self.game_area()[check_y - 1][check_x] == 0 or self.game_area()[check_y - 1][check_x] == 1 or  self.game_area()[check_y - 1][check_x] == id) and gone_down is False:
+                check_y -= 1
+                gone_up = True
+
+            if i > 10:
+                break
+
+            i += 1
+        
+        # print(mock_game_area)
+        # print(in_view)
+        
+        return in_view
     
 
     def path_to_special(self):
@@ -356,7 +404,6 @@ class Actions:
         [is_tunnel, tunnel_delay] = self.positions.find_tunnel()
         [move, drop_delay] = self.positions.find_drop()
 
-
         if is_wall:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], wall_delay)
         elif is_tunnel:
@@ -373,23 +420,27 @@ class Actions:
         
         goombas = self.positions.find_bad_guy(id)
 
+        # if not id in self.game_area():
+        #     return False
+
         # Return false if no goomba
-        if self.positions.bad_guy_coming(id) is False:
+        if self.positions.in_view(id) is False:
+            print("Returning False")
             return False
         
+        print("Releasing Button")
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
         
         # If there are goomba get the x and y position of the first goomba
         [goomb_y, goomb_x] = np.array(goombas[0])
 
         if abs(self.positions.mario_x - goomb_x) < 2:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 5])
-
-            for tick in range(15):
-                self.controller.pyboy.tick()
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
             return True
         elif abs(self.positions.mario_y - goomb_y) < 2:
             return True
+        
+        return True
     
 
     def go_to_block(self):
@@ -478,12 +529,15 @@ class MarioExpert:
         self.environment.pyboy.tick()
         self.where.find_mario()
 
+        # if self.environment.game_area().size not 320:
+        #     return
+
+        print(self.environment.game_area().size)
+
         kg = self.actions.kill_bad_guy(15)
         if kg is False: kg = self.actions.kill_bad_guy(16)
         if kg is False: kg = self.actions.kill_bad_guy(18)
         if kg is False: self.actions.move_normally()
-
-        print(self.environment.game_area())
             
 
         
