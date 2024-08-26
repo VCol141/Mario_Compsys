@@ -98,6 +98,11 @@ class MarioController(MarioEnvironment):
 
         # Simply toggles the buttons being on or off for a duration of act_freq
 
+        if actions == [-1]:
+            for i in range(WindowEvent.RELEASE_ARROW_UP, WindowEvent.RELEASE_BUTTON_START):
+                self.pyboy.send_input(i)
+                return
+
         if delay < 5 and delay > 0:
             delay = 5
         
@@ -116,78 +121,6 @@ class MarioController(MarioEnvironment):
         for _ in range(5):
             self.pyboy.tick()
 
-class Actions:
-    def __init__(self, enviroment, positions):
-        self.controller = enviroment
-        self.game_area = enviroment.game_area
-        self.positions = positions
-    
-
-    def move_normally(self):
-        [is_wall, wall_delay] = self.positions.find_wall()
-        [is_tunnel, tunnel_delay] = self.positions.find_tunnel()
-
-
-        if is_wall:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], wall_delay)
-        elif is_tunnel:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], tunnel_delay)
-        else:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0) 
-    
-
-    def kill_goomb(self):
-
-        # Get the positions of mario and any goomba
-        [mario_x, mario_y] = self.positions.find_mario()
-        goombas = self.positions.find_goomb()
-
-        # Return false if no goomba
-        if self.positions.goomba_coming() is False:
-            return False
-        
-        # If there are goomba get the x and y position of the first goomba
-        [goomb_y, goomb_x] = np.array(goombas[0])
-
-        if abs(mario_x - goomb_x) < 2:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 7])
-            return True
-        elif abs(mario_y - goomb_y) < 2:
-            return True
-    
-
-    def go_to_block(self):
-        [mario_x, mario_y] = self.positions.find_mario()
-
-        # print(self.game_area())
-    
-        if np.array(self.positions.find_special_blocks()).size <= 1:
-            return
-
-        is_smallest = 1000
-
-        for blocks in self.positions.find_special_blocks():
-            diffx = mario_x - blocks[1]
-            diffy = mario_y - blocks[0]
-
-            if mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2)) < is_smallest:
-                diff_x = mario_x - blocks[1]
-                diff_y = mario_y - blocks[0]
-                is_smallest = mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2))
-
-        if diff_y < 0:
-            return
-        elif diff_x < -0.5:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
-        elif diff_x > -0.5:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 5)
-        else:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A], 12)
-            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT, WindowEvent.PRESS_BUTTON_A], 15)
-
-        
-        
-    
 
 class Enviroment:
     def __init__(self, enviroment):
@@ -197,7 +130,7 @@ class Enviroment:
         self.mario_x = 0
         self.mario_y = 0
 
-        self.goomba_pos = [[0]]
+        self.bad_guy_pos = [[0]]
     
 
     def find_mario(self):
@@ -218,18 +151,18 @@ class Enviroment:
 
     
 
-    def find_goomb(self):
-        goombx, goomby = np.where(self.game_area() == 15)
+    def find_bad_guy(self, id):
+        badx, bady = np.where(self.game_area() == id)
 
-        if goombx.size == 0:
+        if badx.size == 0:
             return
 
-        self.goomba_pos = [0 for y in range(goombx.size)]
+        self.bad_guy_pos = [0 for y in range(badx.size)]
 
-        for index in range(goombx.size):
-            self.goomba_pos[index] = np.array((goombx[index], goomby[index]))
+        for index in range(badx.size):
+            self.bad_guy_pos[index] = np.array((badx[index], bady[index]))
         
-        return self.goomba_pos
+        return self.bad_guy_pos
 
     
 
@@ -274,6 +207,61 @@ class Enviroment:
         
         return (is_tunnel, delay)
     
+
+    def find_hole(self):
+        is_hole = False
+
+        initial_sweep = np.array(np.where(self.game_area()[range(14,16),:] == 0))
+
+        # print(self.game_area()[range(8, 16), :])
+
+        if initial_sweep.size <= 1:
+            return(False, 0)
+        
+        hole = initial_sweep[1]
+
+        if abs(self.mario_x - hole[0]) <= 3:
+            is_hole = True
+
+        return(is_hole, 10)
+    
+    def find_drop(self):
+
+        if np.array(np.where(self.game_area()[range(14,16),:] == 0)).size <= 1:
+            return(0, 0)
+        
+        move = 0
+        delay = 5
+        check_y = round(self.mario_y + 0.5)
+        check_x = round(self.mario_x + 1)
+
+        mock_game_area = self.game_area()
+
+        while check_x < 20:
+
+            if check_y >= 16:
+                move  = 2
+                delay = 12
+                break
+
+            current_block = self.game_area()[check_y][check_x]
+
+            if current_block == 0:
+                mock_game_area[check_y][check_x] = 99
+            elif current_block == 10 or current_block == 14 or current_block == 12:
+                break
+            
+            check_y += 1
+
+        if (check_y - self.mario_y) > 7 and move == 0:
+            move = 1
+            delay = 50
+            for delay in range(5):
+                self.controller.pyboy.tick()
+
+        return (move, delay)
+
+
     def find_special_blocks(self):
         goombx, goomby = np.where(self.game_area() == 13)
 
@@ -295,7 +283,7 @@ class Enviroment:
 
         mock_game_area = self.game_area()
 
-        if np.array(self.find_goomb()).size <= 1:
+        if np.array(self.find_bad_guy(15)).size <= 1:
             return is_goomba
 
         while check_x < 20 and is_goomba == False:
@@ -367,6 +355,86 @@ class Enviroment:
                 print("none")
 
 
+class Actions:
+    def __init__(self, enviroment, positions):
+        self.controller = enviroment
+        self.game_area = enviroment.game_area
+        self.positions = positions
+    
+
+    def move_normally(self):
+        [is_wall, wall_delay] = self.positions.find_wall()
+        [is_tunnel, tunnel_delay] = self.positions.find_tunnel()
+        [move, drop_delay] = self.positions.find_drop()
+
+
+        if is_wall:
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], wall_delay)
+        elif is_tunnel:
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], tunnel_delay)
+        elif move == 1:
+            self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], drop_delay)
+        elif move == 2:
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], drop_delay)
+        else:
+            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
+    
+
+    def kill_goomb(self):
+
+        # Get the positions of mario and any goomba
+        [mario_x, mario_y] = self.positions.find_mario()
+        goombas = self.positions.find_bad_guy(15)
+
+        # Return false if no goomba
+        if self.positions.goomba_coming() is False:
+            return False
+        
+        self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
+        
+        # If there are goomba get the x and y position of the first goomba
+        [goomb_y, goomb_x] = np.array(goombas[0])
+
+        if abs(mario_x - goomb_x) < 2:
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 5])
+
+            for tick in range(15):
+                self.controller.pyboy.tick()
+            return True
+        elif abs(mario_y - goomb_y) < 2:
+            return True
+    
+
+    def go_to_block(self):
+        [mario_x, mario_y] = self.positions.find_mario()
+
+        # print(self.game_area())
+    
+        if np.array(self.positions.find_special_blocks()).size <= 1:
+            return
+
+        is_smallest = 1000
+
+        for blocks in self.positions.find_special_blocks():
+            diffx = mario_x - blocks[1]
+            diffy = mario_y - blocks[0]
+
+            if mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2)) < is_smallest:
+                diff_x = mario_x - blocks[1]
+                diff_y = mario_y - blocks[0]
+                is_smallest = mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2))
+
+        if diff_y < 0:
+            return
+        elif diff_x < -0.5:
+            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
+        elif diff_x > -0.5:
+            self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 5)
+        else:
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A], 12)
+            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT, WindowEvent.PRESS_BUTTON_A], 15)
+
+
 class MarioExpert:
     """
     The MarioExpert class represents an expert agent for playing the Mario game.
@@ -385,7 +453,6 @@ class MarioExpert:
 
         self.environment = MarioController(headless=headless)
         self.where = Enviroment(enviroment=self.environment)
-        self.Goomba = Goomba(enviroment=self.environment, positons=self.environment)
         self.actions = Actions(enviroment=self.environment, positions=self.where)
 
         self.video = None
@@ -408,7 +475,7 @@ class MarioExpert:
 
         output_action = ([0], 0)
 
-        goomb = self.where.find_goomb()
+        goomb = self.where.find_goomb(15)
 
         print(goomb)
 
@@ -425,8 +492,14 @@ class MarioExpert:
         self.environment.pyboy.tick()
         self.where.find_mario()
 
-        if self.actions.kill_goomb() == False:
+        kg = self.actions.kill_goomb()
+
+        if kg is False:
             self.actions.move_normally()
+
+        print(self.environment.game_area())
+            
+
         
 
 
