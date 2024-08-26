@@ -125,8 +125,6 @@ class Enviroment:
 
         self.mario_x = 0
         self.mario_y = 0
-
-        self.bad_guy_pos = [[0]]
     
 
     def find_mario(self):
@@ -270,33 +268,6 @@ class Enviroment:
             self.goomba_pos[index] = np.array((goombx[index], goomby[index]))
         
         return self.goomba_pos
-    
-
-    def bad_guy_coming(self, id):
-        check_y = round(self.mario_y + 0.5)
-        check_x = round(self.mario_x + 1)
-
-        mock_game_area = self.game_area()
-
-        if np.array(self.find_bad_guy(id)).size <= 1:
-            return False
-
-        while check_x < 20 and check_y >= 16:
-            
-            current_block = self.game_area()[check_y][check_x]
-
-            if current_block == 0:
-                mock_game_area[check_y][check_x] = 99
-            elif current_block == 14 or current_block == 10:
-                check_y -= 1
-                check_x -= 2
-            elif current_block == id:
-                mock_game_area[check_y][check_x] = 999
-                return True
-            
-            check_x += 1
-        
-        return False
     
 
     def in_view(self, id):
@@ -499,25 +470,6 @@ class MarioExpert:
         pygame.init()
         # self.screen = pygame.display.set_mode((640, 480))
         # pygame.display.set_caption('Mario Expert')
-    
-
-    def choose_action(self):
-        global goomba_in_scene
-        state = self.environment.game_state()
-        frame = self.environment.grab_frame()
-        game_area = self.environment.game_area()
-
-        # Implement your code here to choose the best action
-        # time.sleep(0.1)
-
-        output_action = ([0], 0)
-
-        goomb = self.where.find_goomb(15)
-
-        print(goomb)
-
-        return output_action
-
 
     def step(self):
         """
@@ -538,10 +490,6 @@ class MarioExpert:
         if kg is False: kg = self.actions.kill_bad_guy(16)
         if kg is False: kg = self.actions.kill_bad_guy(18)
         if kg is False: self.actions.move_normally()
-            
-
-        
-
 
 
     def play(self):
