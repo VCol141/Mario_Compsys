@@ -268,15 +268,17 @@ class Enviroment:
         return self.goomba_pos
     
 
-    def Bad_Guys_Ahead(self, id):
+    def Bad_Guys_Ahead(self):
 
-        list_of_non_obstacles = [id, 0, 1]
+        if 18 in self.game_area():
+            return (True, self.find_bad_guy(18))
+        
+        id = 0
+        
+        list_of_non_obstacles = [15, 16, 0, 1]
         
         check_y = round(self.mario_y + 0.5)
         check_x = round(self.mario_x)
-
-        if id == 18 and id in self.game_area():
-            return True
 
         in_view = False
 
@@ -290,9 +292,10 @@ class Enviroment:
         while (check_y < 15 and check_y >= 0) and (check_x < 19 and check_x >= 0):
             mock_game_area[check_y][check_x] = 99
 
-            if self.game_area()[check_y][check_x] == id:
+            if self.game_area()[check_y][check_x] in [15, 16, 18]:
                 in_view = True
                 mock_game_area[check_y][check_x] = 76
+                id = self.game_area()[check_y][check_x]
                 break
             
             if (self.game_area()[check_y + 1][check_x] in list_of_non_obstacles) and gone_up is False:
@@ -314,7 +317,7 @@ class Enviroment:
         # print(mock_game_area)
         # print(in_view)
         
-        return in_view
+        return (in_view, self.find_bad_guy(id))
     
 
     def path_to_special(self):
@@ -387,26 +390,27 @@ class Actions:
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
     
 
-    def kill_bad_guy(self, id):
-        
-        goombas = self.positions.find_bad_guy(id)
+    def kill_bad_guy(self):
 
         # if not id in self.game_area():
         #     return False
 
         # Return false if no goomba
-        if self.positions.Bad_Guys_Ahead(id) is False:
+
+        [is_bad_guy, bad_guy_pos] = self.positions.Bad_Guys_Ahead()
+
+        if is_bad_guy is False:
             return False
         
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
         
         # If there are goomba get the x and y position of the first goomba
-        [goomb_y, goomb_x] = np.array(goombas[0])
+        [bad_y, bad_x] = bad_guy_pos[0]
 
-        if abs(self.positions.mario_x - goomb_x) < 2:
+        if abs(self.positions.mario_x - bad_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
             return True
-        elif abs(self.positions.mario_y - goomb_y) < 2:
+        elif abs(self.positions.mario_y - bad_y) < 2:
             return True
         
         return True
@@ -480,9 +484,9 @@ class MarioExpert:
         # if self.environment.game_area().size not 320:
         #     return
 
-        kg = self.actions.kill_bad_guy(15)
-        if kg is False: kg = self.actions.kill_bad_guy(16)
-        if kg is False: kg = self.actions.kill_bad_guy(18)
+        kg = self.actions.kill_bad_guy()
+        # if kg is False: kg = self.actions.kill_bad_guy(16)
+        # if kg is False: kg = self.actions.kill_bad_guy(18)
         if kg is False: self.actions.move_normally()
 
 
