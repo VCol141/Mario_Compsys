@@ -92,34 +92,41 @@ class MarioController(MarioEnvironment):
         You can change the action type to whatever you want or need just remember the base control of the game is pushing buttons
         """
 
-        # Simply toggles the buttons being on or off for a duration of act_freq
-
+        # if actions input is '-1' release all buttons 
         if actions == [-1]:
             for i in range(WindowEvent.RELEASE_ARROW_UP, WindowEvent.RELEASE_BUTTON_START):
                 self.pyboy.send_input(i)
                 return
-
+            
+        # If delay is less than 5 (but not 0) then round up to 5 (as function is unreliable if below that delay)
         if delay < 5 and delay > 0:
             delay = 5
         
+        # Run all actions
         for action in actions:
             self.pyboy.send_input(action)
 
+        # If no delay before turning off, return straight away
         if (delay == 0):
             return
         
+        # Delay
         for _ in range(delay):
             self.pyboy.tick()
-
+        
+        # Release all button presses
         for action in actions:
             self.pyboy.send_input(action + 8)
 
+        #delay in order for pyboy to recognise button presses
         for _ in range(5):
             self.pyboy.tick()
 
 
+# Function that has functions to find blocks in the game_area()
 class Enviroment:
     def __init__(self, enviroment):
+        # Initiate all variables
         self.controller = enviroment
         self.game_area = enviroment.game_area
 
@@ -129,128 +136,117 @@ class Enviroment:
 
     def find_mario(self):
 
+        # get y and x positions of mario
         [mario_y, mario_x] = np.where(self.game_area() == 1)
 
+        # calculate the average position
         if mario_x.size > 0 and mario_y.size > 0:
             self.mario_x = (np.max(mario_x) + np.min(mario_x)) / 2
             self.mario_y = (np.max(mario_y) + np.min(mario_y)) / 2
         
+        # Return the positions
         return self.mario_x, self.mario_y
 
-    
 
     def find_bad_guy(self, id):
+        # Get positions of bad guys
         badx, bady = np.where(self.game_area() == id)
 
+        # If not bad guys return -1
         if badx.size == 0:
-            return
-
+            return -1
+        
+        # create an empty array
         self.bad_guy_pos = [0 for y in range(badx.size)]
 
+        # reconfigure the indexes into another array
         for index in range(badx.size):
             self.bad_guy_pos[index] = np.array((badx[index], bady[index]))
         
+        # Return positions of bad guy positions
         return self.bad_guy_pos
 
-    
 
-    def find_wall(self):
+    def find_wall_tunnel(self, id):
+        # Sets standard delay and flag
         delay = 12
         is_wall = False
 
+        # If mario is out of bounds (died or no longer in view) exit
         if (self.mario_x + 1.5) >= 20:
-            return (is_wall, 0)
+            return (is_wall, delay)
+        
+        # Find if there's a wall in front of mario
+        initial_sweep = np.array(np.where(self.game_area()[:, int(self.mario_x + 1.5)] == id))
 
-        initial_sweep = np.array(np.where(self.game_area()[:, int(self.mario_x + 1.5)] == 10))
-
-        if initial_sweep.size == 0 or np.array(np.where(self.game_area()[int(self.mario_y + 0.5),:] == 10)).size == 0:
+        # If there is no wall in front return
+        if initial_sweep.size == 0 or np.array(np.where(self.game_area()[int(self.mario_y + 0.5),:] == id)).size == 0:
             return (is_wall, 0)
         
+        # Get the smallest index in sweep
         array = np.min(initial_sweep)
 
+        # Calculate the wall height
         wall_height = 1.5 + (self.mario_y - array)
 
+        # if there is a wall set flag to true
         if (wall_height > 0):
             is_wall = True
-
+        
+        # Calculate delay time as a function of wall height
         delay = int(((11-5)/(4-3)) * wall_height)
         
+        # Return flag and delay calculation
         return (is_wall, delay)
     
-    def find_tunnel(self):
-        is_tunnel = False
-        delay = 12
 
-        if (self.mario_x + 1.5 >= 20):
-            return (is_tunnel, 0)
-
-        initial_sweep = np.array(np.where(self.game_area()[:, int(self.mario_x + 1.5)] == 14))
-
-
-        if initial_sweep.size == 0:
-            return (False, 0)
-        
-        array = np.min(initial_sweep)
-
-        wall_height = 2 + (self.mario_y - array)
-
-        if (wall_height > 0):
-            is_tunnel = True
-
-        delay = int(((11-5)/(4-3)) * wall_height)
-        
-        return (is_tunnel, delay)
-    
-
-    def find_hole(self):
-        is_hole = False
-
-        initial_sweep = np.array(np.where(self.game_area()[range(14,16),:] == 0))
-
-        if initial_sweep.size <= 1:
-            return(False, 0)
-        
-        hole = initial_sweep[1]
-
-        if abs(self.mario_x - hole[0]) <= 3:
-            is_hole = True
-
-        return(is_hole, 10)
-    
     def find_drop(self):
-
+        # If there is no hole, then no need to worry about drop so exit as 0
         if np.array(np.where(self.game_area()[range(14,16),:] == 0)).size <= 1:
             return(0, 0)
         
+        # Set flags and get starting position
         move = 0
         delay = 5
         check_y = round(self.mario_y + 0.5)
         check_x = round(self.mario_x + 1)
 
+        # create copy of game area for debugging and testing
         mock_game_area = self.game_area()
 
+        # Loop through
         while check_x < 20:
 
+            # If y axis exceeds boundary, set flag to 2 (as there is a hole, so need to jup over), and delay to 20
             if check_y >= 16:
                 move  = 2
                 delay = 20
                 break
 
+            # Tet current block
             current_block = self.game_area()[check_y][check_x]
 
+            # Check what block is
             if current_block == 0:
+                # set to 99 for testing purposes
                 mock_game_area[check_y][check_x] = 99
             elif current_block == 10 or current_block == 14 or current_block == 12:
+                # Break once it hits a surface
                 break
-            
-            check_y += 1
 
+            # Incrament y downwards
+            check_y += 1
+        
+        # If the height is greater than 7, and move is 0, then change move to 1 (as it just a drop to another floor)
         if (check_y - self.mario_y) > 7 and move == 0:
             move = 1
             delay = 50
+
+            # Delay in order for mario to just go over ledge
             for delay in range(5):
                 self.controller.pyboy.tick()
 
+        # Return move flag and delay
         return (move, delay)
 
 
@@ -374,8 +370,8 @@ class Actions:
     
 
     def move_normally(self):
-        [is_wall, wall_delay] = self.positions.find_wall()
-        [is_tunnel, tunnel_delay] = self.positions.find_tunnel()
+        [is_wall, wall_delay] = self.positions.find_wall_tunnel(10)
+        [is_tunnel, tunnel_delay] = self.positions.find_wall_tunnel(14)
         [move, drop_delay] = self.positions.find_drop()
 
         if is_wall:
@@ -392,27 +388,24 @@ class Actions:
 
     def kill_bad_guy(self):
 
-        # if not id in self.game_area():
-        #     return False
-
-        # Return false if no goomba
-
+        # Look ahead to see if there are any bad guys
         [is_bad_guy, bad_guy_pos] = self.positions.Bad_Guys_Ahead()
 
+        # If no bad guy, exit
         if is_bad_guy is False:
             return False
         
+        # Release run forward button
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
         
-        # If there are goomba get the x and y position of the first goomba
+        # If there are goomba get the x and y position of the first bad guy
         [bad_y, bad_x] = bad_guy_pos[0]
 
+        # If bad guy is close, then jump
         if abs(self.positions.mario_x - bad_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
-            return True
-        elif abs(self.positions.mario_y - bad_y) < 2:
-            return True
         
+        # Return that there is a bad guy to main running function
         return True
     
 
