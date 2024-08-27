@@ -22,6 +22,7 @@ import math as mt
 
 from scipy.signal import correlate2d
 
+
 class MarioController(MarioEnvironment):
     """
     The MarioController class represents a controller for the Mario game environment.
@@ -59,15 +60,15 @@ class MarioController(MarioEnvironment):
         ]
 
         button_actions: list[WindowEvent] = [
-            WindowEvent.QUIT,                       #  0
-            WindowEvent.PRESS_ARROW_UP,             #  1
-            WindowEvent.PRESS_ARROW_DOWN,           #  2
-            WindowEvent.PRESS_ARROW_RIGHT,          #  3
-            WindowEvent.PRESS_ARROW_LEFT,           #  4
-            WindowEvent.PRESS_BUTTON_A,             #  5
-            WindowEvent.PRESS_BUTTON_B,             #  6
-            WindowEvent.PRESS_BUTTON_SELECT,        #  7
-            WindowEvent.PRESS_BUTTON_START,         #  8
+            WindowEvent.QUIT,  # 0
+            WindowEvent.PRESS_ARROW_UP,  # 1
+            WindowEvent.PRESS_ARROW_DOWN,  # 2
+            WindowEvent.PRESS_ARROW_RIGHT,  # 3
+            WindowEvent.PRESS_ARROW_LEFT,  # 4
+            WindowEvent.PRESS_BUTTON_A,  # 5
+            WindowEvent.PRESS_BUTTON_B,  # 6
+            WindowEvent.PRESS_BUTTON_SELECT,  # 7
+            WindowEvent.PRESS_BUTTON_START,  # 8
         ]
 
         release_button: list[WindowEvent] = [
@@ -92,16 +93,16 @@ class MarioController(MarioEnvironment):
         You can change the action type to whatever you want or need just remember the base control of the game is pushing buttons
         """
 
-        # if actions input is '-1' release all buttons 
+        # if actions input is '-1' release all buttons
         if actions == [-1]:
             for i in range(WindowEvent.RELEASE_ARROW_UP, WindowEvent.RELEASE_BUTTON_START):
                 self.pyboy.send_input(i)
                 return
-            
+
         # If delay is less than 5 (but not 0) then round up to 5 (as function is unreliable if below that delay)
         if delay < 5 and delay > 0:
             delay = 5
-        
+
         # Run all actions
         for action in actions:
             self.pyboy.send_input(action)
@@ -109,16 +110,16 @@ class MarioController(MarioEnvironment):
         # If no delay before turning off, return straight away
         if (delay == 0):
             return
-        
+
         # Delay
         for _ in range(delay):
             self.pyboy.tick()
-        
+
         # Release all button presses
         for action in actions:
             self.pyboy.send_input(action + 8)
 
-        #delay in order for pyboy to recognise button presses
+        # delay in order for pyboy to recognise button presses
         for _ in range(5):
             self.pyboy.tick()
 
@@ -132,7 +133,6 @@ class Enviroment:
 
         self.mario_x = 0
         self.mario_y = 0
-    
 
     def find_mario(self):
 
@@ -143,10 +143,9 @@ class Enviroment:
         if mario_x.size > 0 and mario_y.size > 0:
             self.mario_x = (np.max(mario_x) + np.min(mario_x)) / 2
             self.mario_y = (np.max(mario_y) + np.min(mario_y)) / 2
-        
+
         # Return the positions
         return self.mario_x, self.mario_y
-
 
     def find_bad_guy(self, id):
         # Get positions of bad guys
@@ -154,18 +153,17 @@ class Enviroment:
 
         # If not bad guys return -1
         if badx.size == 0:
-            return 
-        
+            return
+
         # create an empty array
         self.bad_guy_pos = [0 for y in range(badx.size)]
 
         # reconfigure the indexes into another array
         for index in range(badx.size):
             self.bad_guy_pos[index] = np.array((badx[index], bady[index]))
-        
+
         # Return positions of bad guy positions
         return self.bad_guy_pos
-
 
     def find_wall_tunnel(self, id):
         # Sets standard delay and flag
@@ -175,14 +173,15 @@ class Enviroment:
         # If mario is out of bounds (died or no longer in view) exit
         if (self.mario_x + 1.5) >= 20:
             return (is_wall, 0)
-        
+
         # Find if there's a wall in front of mario
-        initial_sweep = np.array(np.where(self.game_area()[:, int(self.mario_x + 1.5)] == id))
+        initial_sweep = np.array(
+            np.where(self.game_area()[:, int(self.mario_x + 1.5)] == id))
 
         # If there is no wall in front return
-        if initial_sweep.size == 0 or (id == 10 and np.array(np.where(self.game_area()[int(self.mario_y + 0.5),:] == id)).size == 0):
+        if initial_sweep.size == 0 or (id == 10 and np.array(np.where(self.game_area()[int(self.mario_y + 0.5), :] == id)).size == 0):
             return (is_wall, 0)
-        
+
         # Get the smallest index in sweep
         array = np.min(initial_sweep)
 
@@ -192,19 +191,18 @@ class Enviroment:
         # if there is a wall set flag to true
         if (wall_height > 0):
             is_wall = True
-        
+
         # Calculate delay time as a function of wall height
         delay = int(((11-5)/(4-3)) * wall_height)
-        
+
         # Return flag and delay calculation
         return (is_wall, delay)
-    
 
     def find_drop(self):
         # If there is no hole, then no need to worry about drop so exit as 0
-        if np.array(np.where(self.game_area()[range(14,16),:] == 0)).size <= 1:
-            return(0, 0)
-        
+        if np.array(np.where(self.game_area()[range(14, 16), :] == 0)).size <= 1:
+            return (0, 0)
+
         # Set flags and get starting position
         move = 0
         delay = 5
@@ -219,7 +217,7 @@ class Enviroment:
 
             # If y axis exceeds boundary, set flag to 2 (as there is a hole, so need to jup over), and delay to 20
             if check_y >= 16:
-                move  = 2
+                move = 2
                 delay = 20
                 break
 
@@ -236,7 +234,7 @@ class Enviroment:
 
             # Incrament y downwards
             check_y += 1
-        
+
         # If the height is greater than 7, and move is 0, then change move to 1 (as it just a drop to another floor)
         if (check_y - self.mario_y) > 7 and move == 0:
             move = 1
@@ -248,118 +246,142 @@ class Enviroment:
 
         # Return move flag and delay
         return (move, delay)
-    
 
     def Bad_Guys_Ahead(self):
 
+        # If there is jumping bug just pause until close
         if 18 in self.game_area():
             return (True, self.find_bad_guy(18))
-        
-        id = 0
-        
+
+        # Initialise id
+        id = -1
+
+        # Set of numbers that won't be considered obstacles
         list_of_non_obstacles = [15, 16, 0, 1]
-        
+
+        # Get starting position
         check_y = round(self.mario_y + 0.5)
         check_x = round(self.mario_x)
 
+        # Set flag
         in_view = False
-
         gone_up = False
         gone_down = False
 
+        # Mock game area for testimng
         mock_game_area = self.game_area()
-        
+
+        # Value to limit iterations
         i = 0
 
         while (check_y < 15 and check_y >= 0) and (check_x < 19 and check_x >= 0):
+            # Set current block to 99 for debuggin purposes
             mock_game_area[check_y][check_x] = 99
 
+            # If current block is bad buy set the outputs
             if self.game_area()[check_y][check_x] in [15, 16, 18]:
                 in_view = True
                 mock_game_area[check_y][check_x] = 76
                 id = self.game_area()[check_y][check_x]
                 break
-            
+
+            # Check positions around current block and set flags and coordinates as neccesary
             if (self.game_area()[check_y + 1][check_x] in list_of_non_obstacles) and gone_up is False:
                 check_y += 1
                 gone_down = True
-            elif (self.game_area()[check_y - 1][check_x + 1]  in list_of_non_obstacles) and (self.game_area()[check_y][check_x + 1]  in list_of_non_obstacles):
+            elif (self.game_area()[check_y - 1][check_x + 1] in list_of_non_obstacles) and (self.game_area()[check_y][check_x + 1] in list_of_non_obstacles):
                 check_x += 1
-            elif (self.game_area()[check_y][check_x + 1] == 0 or self.game_area()[check_y][check_x + 1] == 1 or  self.game_area()[check_y][check_x + 1] == id) and (1 == 0):
+            elif (self.game_area()[check_y][check_x + 1] == 0 or self.game_area()[check_y][check_x + 1] == 1 or self.game_area()[check_y][check_x + 1] == id) and (1 == 0):
                 check_x += 1
-            elif (self.game_area()[check_y - 1][check_x]  in list_of_non_obstacles) and gone_down is False:
+            elif (self.game_area()[check_y - 1][check_x] in list_of_non_obstacles) and gone_down is False:
                 check_y -= 1
                 gone_up = True
 
+            # If out of loops break
             if i > 10:
                 break
 
             i += 1
-        
-        # print(mock_game_area)
-        # print(in_view)
-        
+
+        # Return flag and position
         return (in_view, self.find_bad_guy(id))
-    
-    
-    def find_special_blocks(self):
-        goombx, goomby = np.where(self.game_area() == 13)
 
-        if goombx.size == 0:
-            return
+    def Path_From_special_Block(self):
+        blocks = self.find_bad_guy(13)
+        block_found = []
+        smallest_dist = 999
 
-        self.goomba_pos = [0 for y in range(goombx.size)]
+        if not blocks:
+            return (False, 0, 0)
 
-        for index in range(goombx.size):
-            self.goomba_pos[index] = np.array((goombx[index], goomby[index]))
-        
-        return self.goomba_pos
-    
+        for block in blocks:
+            current_min = mt.sqrt(
+                mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
 
-    def path_to_special(self):
-        check_y = round(self.mario_y + 0.5)
-        is_block = False
-        is_above = False
+            if (current_min < smallest_dist) and (self.mario_y > block[0]):
+                smallest_dist = current_min
+                block_found = block
 
-        blocks = self.find_special_blocks()
+        if len(block_found) <= 0:
+            return (False, 0, 0)
 
-        if np.array(blocks).size == 0:
-            return
+        # Set of numbers that won't be considered obstacles
+        list_of_non_obstacles = [13, 0, 1]
 
-        block = blocks[0]
-        block_x, block_y = block
+        # Get starting position
+        check_y = block_found[0]
+        check_x = block_found[1]
 
+        # Set flag
+        in_view = False
+        direction = 0
+        turn = 0
+        directly_above = True
+        jumps = 0
+
+        # Mock game area for testimng
         mock_game_area = self.game_area()
 
-        while not is_block:
-            
-            if round(self.mario_x) < block_x:
-                check_x = round(self.mario_x + 1)
-                go_left = False
-            elif round(self.mario_x) > block_x:
-                check_x = round(self.mario_x - 1)
-                go_left = True
+        # Value to limit iterations
+        i = 0
+
+        while (check_y < 15 and check_y >= 0) and (check_x < 19 and check_x >= 0):
+            # Set current block to 99 for debuggin purposes
+            mock_game_area[check_y][check_x] = 99
+
+            if self.game_area()[check_y][check_x] == 1:
+                in_view = True
+                break
+
+            if (self.game_area()[check_y + 1][check_x] in list_of_non_obstacles):
+                check_y += 1
+                direction = 0
             else:
-                is_above = True
+                directly_above = False
+                if ((self.mario_x - check_x > 0) or direction == 1) and self.game_area()[check_y][check_x + 1] in list_of_non_obstacles:
+                    check_x += 1
+                    direction = 1
+                    turn = 1
+                elif ((self.mario_x - check_x < 0) or direction == 2) and self.game_area()[check_y][check_x - 1] in list_of_non_obstacles:
+                    check_x -= 1
+                    direction = 2
+                    turn = 2
+                else:
+                    break
 
-            current_block = self.game_area()[check_y][check_x]
+            # If out of loops break
+            if i > 20:
+                break
 
-            if current_block == 0:
+            i += 1
 
-                mock_game_area()[check_y][check_x] = 99
+        if (direction == 0 and not directly_above and turn == 1):
+            jumps = 1
+        elif (direction == 0 and not directly_above and turn == 2):
+            jumps = 2
 
-            elif current_block == 14 or current_block == 10:
-                if self.game_area()[check_y - 1][check_x] == 0:
-                    check_x
-                
-            
-
-            if go_left and (block_y != self.mario_y):
-                check_x -= 1
-            elif (block_y != self.mario_y):
-                check_x += 1
-            elif (self.mario_y > block_y):
-                print("none")
+        # Return flag and position
+        return (in_view, direction, jumps)
 
 
 class Actions:
@@ -367,7 +389,6 @@ class Actions:
         self.controller = enviroment
         self.game_area = enviroment.game_area
         self.positions = positions
-    
 
     def move_normally(self):
         [is_wall, wall_delay] = self.positions.find_wall_tunnel(10)
@@ -375,16 +396,19 @@ class Actions:
         [move, drop_delay] = self.positions.find_drop()
 
         if is_wall:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], wall_delay)
+            self.controller.run_action(
+                [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], wall_delay)
         elif is_tunnel:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], tunnel_delay)
+            self.controller.run_action(
+                [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], tunnel_delay)
         elif move == 1:
-            self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], drop_delay)
+            self.controller.run_action(
+                [WindowEvent.RELEASE_ARROW_RIGHT], drop_delay)
         elif move == 2:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], drop_delay)
+            self.controller.run_action(
+                [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], drop_delay)
         else:
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
-    
 
     def kill_bad_guy(self):
 
@@ -394,46 +418,45 @@ class Actions:
         # If no bad guy, exit
         if is_bad_guy is False:
             return False
-        
+
         # Release run forward button
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
-        
+
         # If there are goomba get the x and y position of the first bad guy
         [bad_y, bad_x] = bad_guy_pos[0]
 
         # If bad guy is close, then jump
         if abs(self.positions.mario_x - bad_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
-        
+
         # Return that there is a bad guy to main running function
         return True
-    
 
-    def go_to_block(self):
-    
-        if np.array(self.positions.find_special_blocks()).size <= 1:
-            return
+    def go_block(self):
+        [is_block, direction, is_above] = self.positions.Path_From_special_Block()
 
-        is_smallest = 1000
+        if (is_block is False) or (not 13 in self.game_area()):
+            return False
 
-        for blocks in self.positions.find_special_blocks():
-            diffx = self.positions.mario_x - blocks[1]
-            diffy = self.positions.mario_y - blocks[0]
+        # Release run forward button
+        self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
 
-            if mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2)) < is_smallest:
-                diff_x = self.positions.mario_x - blocks[1]
-                diff_y = self.positions.mario_y - blocks[0]
-                is_smallest = mt.sqrt(mt.pow(diffx,2) + mt.pow(diffy, 2))
-
-        if diff_y < 0:
-            return
-        elif diff_x < -0.5:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
-        elif diff_x > -0.5:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 5)
-        else:
+        if direction == 0 and is_above == 0:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A], 12)
-            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT, WindowEvent.PRESS_BUTTON_A], 15)
+        elif direction == 0 and is_above == 1:
+            self.controller.run_action(
+                [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_LEFT], 12)
+        elif direction == 0 and is_above == 2:
+            self.controller.run_action(
+                [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], 12)
+        elif direction == 1:
+            self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 0)
+        elif direction == 2:
+            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
+        else:
+            return False
+
+        return True
 
 
 class MarioExpert:
@@ -454,7 +477,8 @@ class MarioExpert:
 
         self.environment = MarioController(headless=headless)
         self.where = Enviroment(enviroment=self.environment)
-        self.actions = Actions(enviroment=self.environment, positions=self.where)
+        self.actions = Actions(
+            enviroment=self.environment, positions=self.where)
 
         self.video = None
 
@@ -478,10 +502,10 @@ class MarioExpert:
         #     return
 
         kg = self.actions.kill_bad_guy()
-        # if kg is False: kg = self.actions.kill_bad_guy(16)
-        # if kg is False: kg = self.actions.kill_bad_guy(18)
-        if kg is False: self.actions.move_normally()
-
+        if kg is False:
+            kg = self.actions.go_block()
+        if kg is False:
+            self.actions.move_normally()
 
     def play(self):
         """
@@ -492,7 +516,8 @@ class MarioExpert:
         frame = self.environment.grab_frame()
         height, width, _ = frame.shape
 
-        self.start_video(f"{self.results_path}/mario_expert.mp4", width, height)
+        self.start_video(
+            f"{self.results_path}/mario_expert.mp4", width, height)
 
         while not self.environment.get_game_over():
             frame = self.environment.grab_frame()
@@ -508,7 +533,6 @@ class MarioExpert:
 
         self.stop_video()
 
-
     def start_video(self, video_name, width, height, fps=30):
         """
         Do NOT edit this method.
@@ -516,7 +540,6 @@ class MarioExpert:
         self.video = cv2.VideoWriter(
             video_name, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)
         )
-
 
     def stop_video(self) -> None:
         """
