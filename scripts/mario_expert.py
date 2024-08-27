@@ -154,7 +154,7 @@ class Enviroment:
 
         # If not bad guys return -1
         if badx.size == 0:
-            return -1
+            return 
         
         # create an empty array
         self.bad_guy_pos = [0 for y in range(badx.size)]
@@ -174,20 +174,20 @@ class Enviroment:
 
         # If mario is out of bounds (died or no longer in view) exit
         if (self.mario_x + 1.5) >= 20:
-            return (is_wall, delay)
+            return (is_wall, 0)
         
         # Find if there's a wall in front of mario
         initial_sweep = np.array(np.where(self.game_area()[:, int(self.mario_x + 1.5)] == id))
 
         # If there is no wall in front return
-        if initial_sweep.size == 0 or np.array(np.where(self.game_area()[int(self.mario_y + 0.5),:] == id)).size == 0:
+        if initial_sweep.size == 0 or (id == 10 and np.array(np.where(self.game_area()[int(self.mario_y + 0.5),:] == id)).size == 0):
             return (is_wall, 0)
         
         # Get the smallest index in sweep
         array = np.min(initial_sweep)
 
         # Calculate the wall height
-        wall_height = 1.5 + (self.mario_y - array)
+        wall_height = (1.5 if id == 10 else 2) + (self.mario_y - array)
 
         # if there is a wall set flag to true
         if (wall_height > 0):
@@ -248,20 +248,6 @@ class Enviroment:
 
         # Return move flag and delay
         return (move, delay)
-
-
-    def find_special_blocks(self):
-        goombx, goomby = np.where(self.game_area() == 13)
-
-        if goombx.size == 0:
-            return
-
-        self.goomba_pos = [0 for y in range(goombx.size)]
-
-        for index in range(goombx.size):
-            self.goomba_pos[index] = np.array((goombx[index], goomby[index]))
-        
-        return self.goomba_pos
     
 
     def Bad_Guys_Ahead(self):
@@ -314,6 +300,20 @@ class Enviroment:
         # print(in_view)
         
         return (in_view, self.find_bad_guy(id))
+    
+    
+    def find_special_blocks(self):
+        goombx, goomby = np.where(self.game_area() == 13)
+
+        if goombx.size == 0:
+            return
+
+        self.goomba_pos = [0 for y in range(goombx.size)]
+
+        for index in range(goombx.size):
+            self.goomba_pos[index] = np.array((goombx[index], goomby[index]))
+        
+        return self.goomba_pos
     
 
     def path_to_special(self):
