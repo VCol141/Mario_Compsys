@@ -254,8 +254,38 @@ class Enviroment:
             bad_guy_pos = self.find_bad_guy(18)
             return (True, bad_guy_pos[0])
 
-        # Initialise id
-        id = -1
+        blocks = self.find_bad_guy(15)
+
+        if not blocks:
+            blocks = self.find_bad_guy(16)
+        else:
+            test_block = self.find_bad_guy(16)
+
+            if not test_block and not blocks:
+                return (False, (0, 0))
+            elif not test_block:
+                print("no adatives")
+            else:
+                blocks.append(test_block)
+
+        block_found = []
+        smallest_dist = 999
+
+        if not blocks:
+            return (False, (0, 0))
+
+        for block in blocks:
+            current_min = mt.sqrt(
+                mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
+
+            if (current_min < smallest_dist):
+                smallest_dist = current_min
+                block_found = block
+
+        if len(block_found) <= 0:
+            return (False, 0, 0)
+        
+
 
         # Set of numbers that won't be considered obstacles
         list_of_non_obstacles = [15, 16, 0, 1]
@@ -268,6 +298,7 @@ class Enviroment:
         in_view = False
         gone_up = False
         gone_down = False
+        gone_side = False
 
         # Mock game area for testimng
         mock_game_area = self.game_area()
@@ -291,11 +322,15 @@ class Enviroment:
                 check_y += 1
                 i += 1
                 gone_down = True
+
             elif (self.game_area()[check_y - 1][check_x + 1] in list_of_non_obstacles) and (self.game_area()[check_y][check_x + 1] in list_of_non_obstacles):
-                check_x += 1
-            elif (self.game_area()[check_y][check_x + 1] == 0 or self.game_area()[check_y][check_x + 1] == 1 or self.game_area()[check_y][check_x + 1] == id) and (1 == 0):
-                check_x += 1
-            elif (self.game_area()[check_y - 1][check_x] in list_of_non_obstacles) and gone_down is False:
+                if block_found[1] < self.mario_x:
+                    check_x -= 1
+                else:
+                    check_x += 1
+                gone_side = True
+
+            elif (self.game_area()[check_y - 1][check_x] in list_of_non_obstacles) and (gone_down is False or gone_side is False):
                 check_y -= 1
                 gone_up = True
 
@@ -425,16 +460,20 @@ class Actions:
             return False
 
         # Release run forward button
-        self.controller.run_action([WindowEvent.RELEASE_ARROW_LEFT, WindowEvent.RELEASE_ARROW_RIGHT], 0)
+        self.controller.run_action(
+            [WindowEvent.RELEASE_ARROW_LEFT, WindowEvent.RELEASE_ARROW_RIGHT], 0)
 
         # If there are goomba get the x and y position of the first bad guy
         [bad_y, bad_x] = bad_guy_pos
-        
+
         # If bad guy is close, then jump
-        if abs(self.positions.mario_x - bad_x) < 2:
+        new_g = self.game_area()[range(int(self.positions.mario_y - 5 if self.positions.mario_y > 5 else self.positions.mario_y),
+                                       int(self.positions.mario_y + 1))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 2))]
+
+        if 10 in new_g:
+            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
+        elif abs(self.positions.mario_x - bad_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
-        # elif 10 in self.game_area()[self.positions.mario_x][]:
-        #     self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT, 0])
 
         self.attemp_flag = False
 
@@ -446,7 +485,7 @@ class Actions:
 
         if (is_block is False) or (not 13 in self.game_area()):
             return False
-        
+
         if self.attemp_flag is True:
             if self.attempts > 0:
                 self.attempts -= 1
@@ -458,13 +497,15 @@ class Actions:
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
 
         if direction == 0 and is_above == 0:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A], 12)
+            self.controller.run_action([WindowEvent.PRESS_BUTTON_A], 10)
             self.attempts += 2
         elif direction == 0 and is_above == 1:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_LEFT], 12)
+            self.controller.run_action(
+                [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_LEFT], 12)
             self.attempts += 2
         elif direction == 0 and is_above == 2:
-            self.controller.run_action([WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], 12)
+            self.controller.run_action(
+                [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], 12)
             self.attempts += 2
         elif direction == 1:
             self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 0)
@@ -472,8 +513,8 @@ class Actions:
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
         else:
             return False
-        
-        if (self.attempts > 10):
+
+        if (self.attempts > 8):
             self.attemp_flag = True
 
         return True
@@ -516,11 +557,10 @@ class MarioExpert:
         """
 
         self.environment.pyboy.tick()
-        [mario_x , mario_y] = self.where.find_mario()
+        [mario_x, mario_y] = self.where.find_mario()
 
-        print(self.environment.game_area()[range(0, int(mario_y))][:])
-        print("")
-
+        # print(self.environment.game_area()[range(0, int(mario_y))][:])
+        # print("")
 
         # if self.environment.game_area().size not 320:
         #     return
@@ -528,10 +568,17 @@ class MarioExpert:
         kg = self.actions.kill_bad_guy()
 
         if kg is False:
+            print("block")
             kg = self.actions.go_block()
+            if kg is True:
+                return
 
         if kg is False:
+            print("move norm")
             self.actions.move_normally()
+            return
+
+        print("goomb")
 
     def play(self):
         """

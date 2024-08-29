@@ -162,3 +162,127 @@ def find_special_blocks(self):
         self.goomba_pos[index] = np.array((goombx[index], goomby[index]))
 
     return self.goomba_pos
+
+
+def new_bad_guy(self):
+
+    if 18 in self.game_area():
+        bad_guy_pos = self.find_bad_guy(18)
+        bad_guy_pos_2 = bad_guy_pos[0]
+
+        if abs(self.mario_x - bad_guy_pos_2[1]) < 2:
+            return (True, 1, True)
+        else:
+            return (True, 1, False)
+
+    blocks = self.find_bad_guy(15)
+
+    if not blocks:
+        blocks = self.find_bad_guy(16)
+    else:
+        test_block = self.find_bad_guy(16)
+
+        if not test_block and not blocks:
+            return (False, 0, False)
+        elif not test_block:
+            print("no adatives")
+        else:
+            blocks.append(test_block)
+
+    block_found = []
+    smallest_dist = 999
+
+    if not blocks:
+        return (False, 0, False)
+
+    for block in blocks:
+        current_min = mt.sqrt(
+            mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
+
+        if (current_min < smallest_dist):
+            smallest_dist = current_min
+            block_found = block
+
+    if len(block_found) <= 0:
+        return (False, 0, 0)
+
+    # Set of numbers that won't be considered obstacles
+    list_of_non_obstacles = [0, 1]
+
+    # Get starting position
+    check_y = block_found[0]
+    check_x = block_found[1]
+
+    # Set flag
+    in_view = False
+    direction = 0
+    turn = 0
+    directly_above = True
+    jumps = False
+
+    # Mock game area for testimng
+    mock_game_area = self.game_area()
+
+    # Value to limit iterations
+    i = 0
+
+    while (check_y < 15 and check_y >= 0) and (check_x < 19 and check_x >= 0):
+        # Set current block to 99 for debuggin purposes
+        mock_game_area[check_y][check_x] = 99
+
+        if self.game_area()[check_y][check_x] == 1:
+            in_view = True
+            break
+
+        if (self.game_area()[check_y + 1][check_x] in list_of_non_obstacles):
+            check_y += 1
+            direction = 0
+        else:
+            directly_above = False
+            if ((self.mario_x - check_x > 0) or direction == 1) and self.game_area()[check_y][check_x + 1] in list_of_non_obstacles:
+                check_x += 1
+                direction = 1
+            elif ((self.mario_x - check_x < 0) or direction == 2) and self.game_area()[check_y][check_x - 1] in list_of_non_obstacles:
+                check_x -= 1
+                direction = 2
+            else:
+                break
+
+        # If out of loops break
+        if i > 20:
+            break
+
+        i += 1
+
+    # Return flag and position
+    return (i < 10 if in_view else False, direction if i > 2 else 2, abs(self.mario_x - block_found[1]) < 2)
+
+
+def new_kill_guy(self):
+
+    if not (18 or 16 or 15 in self.game_area()):
+        return False
+
+    [is_block, direction, is_above] = self.positions.new_bad_guy()
+
+    if (is_block is False):
+        return False
+
+    # Release run forward button
+    self.controller.run_action(
+        [WindowEvent.RELEASE_ARROW_LEFT, WindowEvent.RELEASE_ARROW_RIGHT], 0)
+
+    new_g = self.game_area()[range(int(self.positions.mario_y - 5 if self.positions.mario_y > 5 else self.positions.mario_y),
+                                   int(self.positions.mario_y + 1))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 2))]
+
+    if 10 in new_g:
+        self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
+    elif direction == 0 and not is_above:
+        self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 15)
+        print("Going Back")
+    elif (direction == 1 or direction == 2) and is_above:
+        self.controller.run_action([WindowEvent.PRESS_BUTTON_A], 30)
+        for i in range(8):
+            self.controller.pyboy.tick()
+
+    return True
