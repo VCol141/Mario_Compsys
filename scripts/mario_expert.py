@@ -148,22 +148,23 @@ class Enviroment:
         return self.mario_x, self.mario_y
 
     def find_bad_guy(self, id):
-        # Get positions of bad guys
-        badx, bady = np.where(self.game_area() == id)
+        
+        bad_guy_list = []
 
-        # If not bad guys return -1
-        if badx.size == 0:
-            return
+        for i in id:
+            # Get position of bad guy
+            badx, bady = np.where(self.game_area() == i)
 
-        # create an empty array
-        self.bad_guy_pos = [0 for y in range(badx.size)]
+            # If no bad guy continue
+            if badx.size == 0:
+                continue
 
-        # reconfigure the indexes into another array
-        for index in range(badx.size):
-            self.bad_guy_pos[index] = np.array((badx[index], bady[index]))
-
-        # Return positions of bad guy positions
-        return self.bad_guy_pos
+            # Append bad guy to list
+            for index in range(badx.size):
+                bad_guy_list.append(np.array((badx[index], bady[index])))
+        
+        # Return list of bad guys
+        return bad_guy_list
 
     def find_wall_tunnel(self, id):
         # Sets standard delay and flag
@@ -251,22 +252,10 @@ class Enviroment:
 
         # If there is jumping bug just pause until close
         if 18 in self.game_area():
-            bad_guy_pos = self.find_bad_guy(18)
+            bad_guy_pos = self.find_bad_guy([18])
             return (True, bad_guy_pos[0])
 
-        blocks = self.find_bad_guy(15)
-
-        if not blocks:
-            blocks = self.find_bad_guy(16)
-        else:
-            test_block = self.find_bad_guy(16)
-
-            if not test_block and not blocks:
-                return (False, (0, 0))
-            elif not test_block:
-                print("no adatives")
-            else:
-                blocks.append(test_block)
+        blocks = self.find_bad_guy([15, 16])
 
         block_found = []
         smallest_dist = 999
@@ -344,14 +333,18 @@ class Enviroment:
         return (in_view, [check_y, check_x])
 
     def Path_From_special_Block(self):
-        blocks = self.find_bad_guy(13)
+        blocks = self.find_bad_guy([13])
+
         block_found = []
         smallest_dist = 999
 
         if not blocks:
             return (False, 0, 0)
+        
+        print(blocks)
 
         for block in blocks:
+            print(block)
             current_min = mt.sqrt(
                 mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
 
@@ -467,13 +460,14 @@ class Actions:
         [bad_y, bad_x] = bad_guy_pos
 
         # If bad guy is close, then jump
-        new_g = self.game_area()[range(int(self.positions.mario_y - 5 if self.positions.mario_y > 5 else self.positions.mario_y),
+        new_g = self.game_area()[range(int(self.positions.mario_y - 4   if self.positions.mario_y > 4 else self.positions.mario_y),
                                        int(self.positions.mario_y + 1))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 2))]
 
-        if 10 in new_g:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
-        elif abs(self.positions.mario_x - bad_x) < 2:
+
+        if abs(self.positions.mario_x - bad_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
+        elif (10 in new_g) or (12 in new_g) or (14 in new_g):
+            self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
 
         self.attemp_flag = False
 
