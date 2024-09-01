@@ -173,7 +173,7 @@ class Enviroment:
 
         # If mario is out of bounds (died or no longer in view) exit
         if (self.mario_x + 1.5) >= 20:
-            return (is_wall, 5)
+            return (is_wall, 0)
 
         # Find if there's a wall in front of mario
         initial_sweep = np.array(
@@ -181,7 +181,7 @@ class Enviroment:
 
         # If there is no wall in front return
         if initial_sweep.size == 0 or (id == 10 and np.array(np.where(self.game_area()[int(self.mario_y + 0.5), :] == id)).size == 0):
-            return (is_wall, 5)
+            return (is_wall, 0)
 
         # Get the smallest index in sweep
         array = np.min(initial_sweep)
@@ -195,9 +195,6 @@ class Enviroment:
 
         # Calculate delay time as a function of wall height
         delay = int(((11-5)/(4-3)) * wall_height)
-
-        if (delay < 5):
-            delay = 5
 
         # Return flag and delay calculation
         return (is_wall, delay)
@@ -256,7 +253,7 @@ class Enviroment:
         # If there is jumping bug just pause until close
         if 18 in self.game_area():
             bad_guy_pos = self.find_bad_guy([18])
-            return (True, bad_guy_pos[0], 18)
+            return (True, bad_guy_pos[0])
 
         blocks = self.find_bad_guy([15, 16])
 
@@ -264,7 +261,7 @@ class Enviroment:
         smallest_dist = 999
 
         if not blocks:
-            return (False, (0, 0), -1)
+            return (False, (0, 0))
 
         for block in blocks:
             current_min = mt.sqrt(
@@ -275,7 +272,7 @@ class Enviroment:
                 block_found = block
 
         if len(block_found) <= 0:
-            return (False, (0, 0), -1)
+            return (False, 0, 0)
         
 
 
@@ -333,7 +330,7 @@ class Enviroment:
             i += 1
 
         # Return flag and position
-        return (in_view, [check_y, check_x], self.game_area()[check_y][check_x])
+        return (in_view, [check_y, check_x])
 
     def Path_From_special_Block(self):
         blocks = self.find_bad_guy([13])
@@ -343,8 +340,11 @@ class Enviroment:
 
         if not blocks:
             return (False, 0, 0)
+        
+        print(blocks)
 
         for block in blocks:
+            print(block)
             current_min = mt.sqrt(
                 mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
 
@@ -438,16 +438,15 @@ class Actions:
             self.controller.run_action(
                 [WindowEvent.RELEASE_ARROW_RIGHT], drop_delay)
         elif move == 2:
-            self.controller.run_action( 
+            self.controller.run_action(
                 [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], drop_delay)
         else:
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
-            print(self.game_area())
 
     def kill_bad_guy(self):
 
         # Look ahead to see if there are any bad guys
-        [is_bad_guy, bad_guy_pos, id] = self.positions.Bad_Guys_Ahead()
+        [is_bad_guy, bad_guy_pos] = self.positions.Bad_Guys_Ahead()
 
         # If no bad guy, exit
         if is_bad_guy is False:
@@ -465,14 +464,10 @@ class Actions:
                                        int(self.positions.mario_y + 1))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 2))]
 
 
-        if abs(self.positions.mario_x - bad_x) < 2 and abs(self.positions.mario_y - bad_y) < 4:
+        if abs(self.positions.mario_x - bad_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
-        elif abs(self.positions.mario_x - bad_x) > 5 and abs(self.positions.mario_y - bad_y) < 1:
-            return False
         elif (10 in new_g) or (12 in new_g) or (14 in new_g):
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 5)
-        elif self.positions.mario_x - bad_x < 0 and self.positions.mario_y - bad_y > 0.5 and id != 18:
-            self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 20)
 
         self.attemp_flag = False
 
@@ -515,6 +510,7 @@ class Actions:
 
         if (self.attempts > 8):
             self.attemp_flag = True
+
         return True
 
 
@@ -557,16 +553,26 @@ class MarioExpert:
         self.environment.pyboy.tick()
         [mario_x, mario_y] = self.where.find_mario()
 
+        # print(self.environment.game_area()[range(0, int(mario_y))][:])
+        # print("")
+
+        # if self.environment.game_area().size not 320:
+        #     return
+
         kg = self.actions.kill_bad_guy()
 
         if kg is False:
+            print("block")
             kg = self.actions.go_block()
             if kg is True:
                 return
 
         if kg is False:
+            print("move norm")
             self.actions.move_normally()
             return
+
+        print("goomb")
 
     def play(self):
         """
