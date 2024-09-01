@@ -148,7 +148,7 @@ class Enviroment:
         return self.mario_x, self.mario_y
 
     def find_bad_guy(self, id):
-        
+
         bad_guy_list = []
 
         for i in id:
@@ -162,7 +162,7 @@ class Enviroment:
             # Append bad guy to list
             for index in range(badx.size):
                 bad_guy_list.append(np.array((badx[index], bady[index])))
-        
+
         # Return list of bad guys
         return bad_guy_list
 
@@ -269,7 +269,7 @@ class Enviroment:
         # Find the block with the smallest distance to Mario
         for block in blocks:
             current_min = mt.sqrt(
-            mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
+                mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
 
             if (current_min < smallest_dist):
                 smallest_dist = current_min
@@ -278,8 +278,6 @@ class Enviroment:
         # If no block found, return False
         if len(block_found) <= 0:
             return (False, 0, 0)
-        
-
 
         # Set of numbers that won't be considered obstacles
         list_of_non_obstacles = [15, 16, 0, 1, 19]
@@ -333,8 +331,6 @@ class Enviroment:
                 break
 
             i += 1
-
-        print(mock_game_area  )
 
         # Return flag and position
         return (in_view, [check_y, check_x])
@@ -480,12 +476,11 @@ class Actions:
         [bad_y, bad_x] = bad_guy_pos
 
         # If bad guy is close, then jump
-        new_g = self.game_area()[range(int(self.positions.mario_y - 4   if self.positions.mario_y > 4 else self.positions.mario_y),
+        new_g = self.game_area()[range(int(self.positions.mario_y - 4 if self.positions.mario_y > 4 else self.positions.mario_y),
                                        int(self.positions.mario_y + 1))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 2))]
-        
-        new_g2 = self.game_area()[range(int(self.positions.mario_y - 4   if self.positions.mario_y > 4 else self.positions.mario_y),
-                                       int(self.positions.mario_y))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 6))]
 
+        new_g2 = self.game_area()[range(int(self.positions.mario_y - 4 if self.positions.mario_y > 4 else self.positions.mario_y),
+                                        int(self.positions.mario_y))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 6))]
 
         if abs(self.positions.mario_x - bad_x) < 2:
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A, 30])
@@ -585,12 +580,9 @@ class MarioExpert:
 
         # Advance the game by one frame
         self.environment.pyboy.tick()
-        
+
         # Find the current position of Mario
         self.where.find_mario()
-
-        # print(self.environment.game_area())
-
 
         # Check if there is a bad guy ahead and try to kill it
         kg = self.actions.kill_bad_guy()
@@ -604,8 +596,6 @@ class MarioExpert:
         # If there is still no bad guy or special block, move normally
         if kg is False:
             self.actions.move_normally()
-            return
-        
 
     def play(self):
         """
