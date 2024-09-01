@@ -255,29 +255,34 @@ class Enviroment:
             bad_guy_pos = self.find_bad_guy([18])
             return (True, bad_guy_pos[0])
 
-        blocks = self.find_bad_guy([15, 16])
+        # Find blocks in the game area
+        blocks = self.find_bad_guy([15, 16, 19])
 
+        # Initialize variables
         block_found = []
         smallest_dist = 999
 
+        # If no blocks found, return False
         if not blocks:
             return (False, (0, 0))
 
+        # Find the block with the smallest distance to Mario
         for block in blocks:
             current_min = mt.sqrt(
-                mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
+            mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
 
             if (current_min < smallest_dist):
                 smallest_dist = current_min
                 block_found = block
 
+        # If no block found, return False
         if len(block_found) <= 0:
             return (False, 0, 0)
         
 
 
         # Set of numbers that won't be considered obstacles
-        list_of_non_obstacles = [15, 16, 0, 1]
+        list_of_non_obstacles = [15, 16, 0, 1, 19]
 
         # Get starting position
         check_y = round(self.mario_y + 0.5)
@@ -300,7 +305,7 @@ class Enviroment:
             mock_game_area[check_y][check_x] = 99
 
             # If current block is bad buy set the outputs
-            if self.game_area()[check_y][check_x] in [15, 16, 18]:
+            if self.game_area()[check_y][check_x] in [15, 16, 18, 19]:
                 in_view = True
                 mock_game_area[check_y][check_x] = 76
                 id = self.game_area()[check_y][check_x]
@@ -329,22 +334,25 @@ class Enviroment:
 
             i += 1
 
+        print(mock_game_area  )
+
         # Return flag and position
         return (in_view, [check_y, check_x])
 
     def Path_From_special_Block(self):
+        # Find blocks in the game area
         blocks = self.find_bad_guy([13])
 
+        # Initialize variables
         block_found = []
         smallest_dist = 999
 
+        # If no blocks found, return False
         if not blocks:
             return (False, 0, 0)
-        
-        print(blocks)
 
+        # Find the block with the smallest distance to Mario
         for block in blocks:
-            print(block)
             current_min = mt.sqrt(
                 mt.pow(abs(self.mario_x - block[1]), 2) + mt.pow(self.mario_y - block[0], 2))
 
@@ -352,6 +360,7 @@ class Enviroment:
                 smallest_dist = current_min
                 block_found = block
 
+        # If no block found, return False
         if len(block_found) <= 0:
             return (False, 0, 0)
 
@@ -369,20 +378,22 @@ class Enviroment:
         directly_above = True
         jumps = 0
 
-        # Mock game area for testimng
+        # Mock game area for testing
         mock_game_area = self.game_area()
 
         # Value to limit iterations
         i = 0
 
         while (check_y < 15 and check_y >= 0) and (check_x < 19 and check_x >= 0):
-            # Set current block to 99 for debuggin purposes
+            # Set current block to 99 for debugging purposes
             mock_game_area[check_y][check_x] = 99
 
+            # Check if Mario is in view
             if self.game_area()[check_y][check_x] == 1:
                 in_view = True
                 break
 
+            # Check positions around current block and set flags and coordinates as necessary
             if (self.game_area()[check_y + 1][check_x] in list_of_non_obstacles):
                 check_y += 1
                 direction = 0
@@ -405,6 +416,7 @@ class Enviroment:
 
             i += 1
 
+        # Determine the number of jumps required based on the direction and Mario's position
         if (direction == 0 and not directly_above and turn == 1):
             jumps = 1
         elif (direction == 0 and not directly_above and turn == 2):
@@ -424,22 +436,30 @@ class Actions:
         self.attemp_flag = False
 
     def move_normally(self):
+        # Find if there is a wall in front of Mario and the delay to overcome it
         [is_wall, wall_delay] = self.positions.find_wall_tunnel(10)
+        # Find if there is a tunnel in front of Mario and the delay to go through it
         [is_tunnel, tunnel_delay] = self.positions.find_wall_tunnel(14)
+        # Find if there is a drop in front of Mario and the delay to jump over it
         [move, drop_delay] = self.positions.find_drop()
 
+        # If there is a wall, press A and right arrow to overcome it with the calculated delay
         if is_wall:
             self.controller.run_action(
                 [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], wall_delay)
+        # If there is a tunnel, press A and right arrow to go through it with the calculated delay
         elif is_tunnel:
             self.controller.run_action(
                 [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], tunnel_delay)
+        # If there is a drop, release the right arrow to drop down with the calculated delay
         elif move == 1:
             self.controller.run_action(
                 [WindowEvent.RELEASE_ARROW_RIGHT], drop_delay)
+        # If there is a big drop, press A and right arrow to jump over it with the calculated delay
         elif move == 2:
             self.controller.run_action(
                 [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], drop_delay)
+        # If there are no obstacles, press the right arrow to move normally
         else:
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
 
@@ -462,6 +482,9 @@ class Actions:
         # If bad guy is close, then jump
         new_g = self.game_area()[range(int(self.positions.mario_y - 4   if self.positions.mario_y > 4 else self.positions.mario_y),
                                        int(self.positions.mario_y + 1))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 2))]
+        
+        new_g2 = self.game_area()[range(int(self.positions.mario_y - 4   if self.positions.mario_y > 4 else self.positions.mario_y),
+                                       int(self.positions.mario_y))][:, range(int(self.positions.mario_x), int(self.positions.mario_x + 6))]
 
 
         if abs(self.positions.mario_x - bad_x) < 2:
@@ -475,11 +498,14 @@ class Actions:
         return True
 
     def go_block(self):
+        # Find if there is a block in front of Mario and the direction and height of the block
         [is_block, direction, is_above] = self.positions.Path_From_special_Block()
 
+        # If there is no block or the block is not a special block, return False
         if (is_block is False) or (not 13 in self.game_area()):
             return False
 
+        # If there is an attempt flag, check if there are remaining attempts
         if self.attemp_flag is True:
             if self.attempts > 0:
                 self.attempts -= 1
@@ -487,27 +513,34 @@ class Actions:
             else:
                 self.attemp_flag = False
 
-        # Release run forward button
+        # Release the run forward button
         self.controller.run_action([WindowEvent.RELEASE_ARROW_RIGHT], 0)
 
+        # Perform actions based on the direction and height of the block
         if direction == 0 and is_above == 0:
+            # Jump straight up
             self.controller.run_action([WindowEvent.PRESS_BUTTON_A], 10)
             self.attempts += 2
         elif direction == 0 and is_above == 1:
+            # Jump up and move left
             self.controller.run_action(
                 [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_LEFT], 12)
             self.attempts += 2
         elif direction == 0 and is_above == 2:
+            # Jump up and move right
             self.controller.run_action(
                 [WindowEvent.PRESS_BUTTON_A, WindowEvent.PRESS_ARROW_RIGHT], 12)
             self.attempts += 2
         elif direction == 1:
+            # Move left
             self.controller.run_action([WindowEvent.PRESS_ARROW_LEFT], 0)
         elif direction == 2:
+            # Move right
             self.controller.run_action([WindowEvent.PRESS_ARROW_RIGHT], 0)
         else:
             return False
 
+        # If there have been more than 8 attempts, set the attempt flag to True
         if (self.attempts > 8):
             self.attemp_flag = True
 
@@ -550,29 +583,29 @@ class MarioExpert:
         This is just a very basic example
         """
 
+        # Advance the game by one frame
         self.environment.pyboy.tick()
-        [mario_x, mario_y] = self.where.find_mario()
+        
+        # Find the current position of Mario
+        self.where.find_mario()
 
-        # print(self.environment.game_area()[range(0, int(mario_y))][:])
-        # print("")
+        # print(self.environment.game_area())
 
-        # if self.environment.game_area().size not 320:
-        #     return
 
+        # Check if there is a bad guy ahead and try to kill it
         kg = self.actions.kill_bad_guy()
 
+        # If there is no bad guy, try to navigate to a special block
         if kg is False:
-            print("block")
             kg = self.actions.go_block()
             if kg is True:
                 return
 
+        # If there is still no bad guy or special block, move normally
         if kg is False:
-            print("move norm")
             self.actions.move_normally()
             return
-
-        print("goomb")
+        
 
     def play(self):
         """
